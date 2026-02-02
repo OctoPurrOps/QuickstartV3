@@ -16,7 +16,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
-@Autonomous(name = "BLUENewPath19ball", group = "Autonomous")
+@Autonomous(name = "blue19", group = "Autonomous")
 public class path19 extends OpMode {
 
     // Pedro follower + timers
@@ -26,7 +26,7 @@ public class path19 extends OpMode {
     // Shooter
     private DcMotorEx shooter;
     private static final double SHOOTER_VELOCITY = 1600.0;
-    private static final double SHOOTER_TARGET_AFTER_PATH1 = 1800.0;
+    private static final double SHOOTER_TARGET_AFTER_PATH = 1800.0;
 
     // Shooter servo
     private Servo shooterServo;
@@ -50,7 +50,7 @@ public class path19 extends OpMode {
     private static final int AIM_MAX_TICKS = 2000;
     private static final double AIM_POWER = 1;
 
-    // New paths holder
+    // Paths holder
     public static class Paths {
         public PathChain Path1;
         public PathChain Path2;
@@ -167,20 +167,26 @@ public class path19 extends OpMode {
 
     private Paths paths;
 
-    // State machine: each PATH_i has a matching WAIT_AFTER_PATH_i
+    // State machine
     public enum PathState {
-        PATH_1, WAIT_AFTER_PATH_1,
-        PATH_2, WAIT_AFTER_PATH_2,
-        PATH_3, WAIT_AFTER_PATH_3,
-        PATH_4, WAIT_AFTER_PATH_4,
-        PATH_5, WAIT_AFTER_PATH_5,
-        PATH_6, WAIT_AFTER_PATH_6,
-        PATH_7, WAIT_AFTER_PATH_7,
-        PATH_8, WAIT_AFTER_PATH_8,
-        PATH_9, WAIT_AFTER_PATH_9,
-        PATH_10, WAIT_AFTER_PATH_10,
-        PATH_11, WAIT_AFTER_PATH_11,
-        PATH_12, WAIT_AFTER_PATH_12,
+        PATH_1,
+        WAIT_AFTER_PATH_1,
+        PATH_2,
+        PATH_3,
+        PATH_4,
+        WAIT_AFTER_PATH_4,
+        PATH_5,
+        PATH_6,
+        WAIT_AFTER_PATH_6,
+        PATH_7,
+        PATH_8,
+        WAIT_AFTER_PATH_8,
+        PATH_9,
+        PATH_10,
+        WAIT_AFTER_PATH_10,
+        PATH_11,
+        PATH_12,
+        WAIT_AFTER_PATH_12,
         DONE
     }
 
@@ -191,21 +197,13 @@ public class path19 extends OpMode {
         if (pathTimer != null) pathTimer.reset();
     }
 
-    // Shooter base helper: only on while driving certain paths if you want
+    // Shooter helper: base speed on driving paths you want
     private void updateShooterSimple() {
         boolean enable =
                 (pathState == PathState.PATH_1) ||
-                        (pathState == PathState.PATH_2) ||
                         (pathState == PathState.PATH_3) ||
-                        (pathState == PathState.PATH_4) ||
-                        (pathState == PathState.PATH_5) ||
                         (pathState == PathState.PATH_6) ||
-                        (pathState == PathState.PATH_7) ||
-                        (pathState == PathState.PATH_8) ||
-                        (pathState == PathState.PATH_9) ||
-                        (pathState == PathState.PATH_10) ||
-                        (pathState == PathState.PATH_11) ||
-                        (pathState == PathState.PATH_12);
+                        (pathState == PathState.PATH_9);
 
         if (enable) {
             shooter.setVelocity(SHOOTER_VELOCITY);
@@ -214,26 +212,29 @@ public class path19 extends OpMode {
         }
     }
 
-    // Shared wait logic: idle + pulses + shooter ramp + solid intake
-    private void handleWaitAfterPath(double t, PathState nextPathState, PathChain nextPath, double idleTime) {
+    // Shared wait logic at ends of 1,4,6,8,10,12:
+    // idle + intake pulses + shooter ramp, but total capped at 2s.
+    private void handleEndWait(double t, PathState nextPathState, PathChain nextPath, double idleTime) {
         double pulseLength = 0.1;
         int numPulses = 3;
         double pulseWindow = numPulses * 2 * pulseLength; // 0.6 s
 
         double rampDuration = 1.3;
-        double rampStart = idleTime; // ramp in sync with pulses
+        double rampStart = idleTime; // ramp while pulses run
 
-        // Shooter
+        double totalWaitLimit = 2.0; // cap end wait at 2 seconds
+
+        // Shooter ramp
         if (t < rampStart) {
             shooter.setVelocity(SHOOTER_VELOCITY);
         } else {
             double rampT = t - rampStart;
             if (rampT >= rampDuration) {
-                shooter.setVelocity(SHOOTER_TARGET_AFTER_PATH1);
+                shooter.setVelocity(SHOOTER_TARGET_AFTER_PATH);
             } else {
                 double alpha = rampT / rampDuration;
                 double vel = SHOOTER_VELOCITY +
-                        (SHOOTER_TARGET_AFTER_PATH1 - SHOOTER_VELOCITY) * alpha;
+                        (SHOOTER_TARGET_AFTER_PATH - SHOOTER_VELOCITY) * alpha;
                 shooter.setVelocity(vel);
             }
         }
@@ -256,14 +257,16 @@ public class path19 extends OpMode {
                 intake2.setPower(0);
             }
 
-        } else if (t < 5.0) {
+        } else if (t < totalWaitLimit) {
+            // after pulses until 2s total: solid intake on
             intake.setPower(INTAKE_POWER);
             intake2.setPower(INTAKE_POWER);
 
         } else {
+            // >=2s: stop and advance
             intake.setPower(0);
             intake2.setPower(0);
-            shooter.setVelocity(SHOOTER_TARGET_AFTER_PATH1);
+            shooter.setVelocity(SHOOTER_TARGET_AFTER_PATH);
 
             if (nextPath != null) {
                 follower.followPath(nextPath, true);
@@ -279,226 +282,236 @@ public class path19 extends OpMode {
     private void updateStateMachine() {
         switch (pathState) {
 
-            // Driving states: follow path, intake ON, then go to wait state
-
+            // PATH 1 (Group A end)
             case PATH_1:
                 updateShooterSimple();
-                intake.setPower(INTAKE_POWER);
-                intake2.setPower(INTAKE_POWER);
                 if (!follower.isBusy()) {
-                    intake.setPower(0);
-                    intake2.setPower(0);
                     setPathState(PathState.WAIT_AFTER_PATH_1);
                 }
                 break;
 
             case WAIT_AFTER_PATH_1: {
                 double t = pathTimer.seconds();
-                double idleTime = 1.0;
-                handleWaitAfterPath(t, PathState.PATH_2, paths.Path2, idleTime);
+                double idleTime1 = 1.0; // idle portion of the 2s
+                handleEndWait(t, PathState.PATH_2, paths.Path2, idleTime1);
                 break;
             }
 
+            // PATH 2 (Group B rule applies to Path3, not Path2)
             case PATH_2:
                 updateShooterSimple();
-                intake.setPower(INTAKE_POWER);
-                intake2.setPower(INTAKE_POWER);
+                // no special intake here, just off
+                intake.setPower(0);
+                intake2.setPower(0);
+
                 if (!follower.isBusy()) {
-                    intake.setPower(0);
-                    intake2.setPower(0);
-                    setPathState(PathState.WAIT_AFTER_PATH_2);
+                    follower.followPath(paths.Path3, true);
+                    follower.setMaxPower(1.0);
+                    setPathState(PathState.PATH_3);
                 }
                 break;
 
-            case WAIT_AFTER_PATH_2: {
-                double t = pathTimer.seconds();
-                double idleTime = 1.0;
-                handleWaitAfterPath(t, PathState.PATH_3, paths.Path3, idleTime);
-                break;
-            }
-
-            case PATH_3:
+            // PATH 3 (Group B: intake starts after 1s while moving)
+            case PATH_3: {
                 updateShooterSimple();
-                intake.setPower(INTAKE_POWER);
-                intake2.setPower(INTAKE_POWER);
-                if (!follower.isBusy()) {
+                double t = pathTimer.seconds();
+                if (t > 1.0) {
+                    intake.setPower(INTAKE_POWER);
+                    intake2.setPower(INTAKE_POWER);
+                } else {
                     intake.setPower(0);
                     intake2.setPower(0);
-                    setPathState(PathState.WAIT_AFTER_PATH_3);
                 }
-                break;
 
-            case WAIT_AFTER_PATH_3: {
-                double t = pathTimer.seconds();
-                double idleTime = 1.0;
-                handleWaitAfterPath(t, PathState.PATH_4, paths.Path4, idleTime);
+                if (!follower.isBusy()) {
+                    // stop intake before next path
+                    intake.setPower(0);
+                    intake2.setPower(0);
+                    follower.followPath(paths.Path4, true);
+                    follower.setMaxPower(1.0);
+                    setPathState(PathState.PATH_4);
+                }
                 break;
             }
 
+            // PATH 4 (Group A end)
             case PATH_4:
                 updateShooterSimple();
-                intake.setPower(INTAKE_POWER);
-                intake2.setPower(INTAKE_POWER);
                 if (!follower.isBusy()) {
-                    intake.setPower(0);
-                    intake2.setPower(0);
                     setPathState(PathState.WAIT_AFTER_PATH_4);
                 }
                 break;
 
             case WAIT_AFTER_PATH_4: {
                 double t = pathTimer.seconds();
-                double idleTime = 1.0;
-                handleWaitAfterPath(t, PathState.PATH_5, paths.Path5, idleTime);
+                double idleTime4 = 1.0;
+                handleEndWait(t, PathState.PATH_5, paths.Path5, idleTime4);
                 break;
             }
 
-            case PATH_5:
+            // PATH 5 (Group B)
+            case PATH_5: {
                 updateShooterSimple();
-                intake.setPower(INTAKE_POWER);
-                intake2.setPower(INTAKE_POWER);
+                double t = pathTimer.seconds();
+                if (t > 1.0) {
+                    intake.setPower(INTAKE_POWER);
+                    intake2.setPower(INTAKE_POWER);
+                } else {
+                    intake.setPower(0);
+                    intake2.setPower(0);
+                }
+
                 if (!follower.isBusy()) {
                     intake.setPower(0);
                     intake2.setPower(0);
-                    setPathState(PathState.WAIT_AFTER_PATH_5);
+                    follower.followPath(paths.Path6, true);
+                    follower.setMaxPower(1.0);
+                    setPathState(PathState.PATH_6);
                 }
                 break;
-
-            case WAIT_AFTER_PATH_5: {
-                double t = pathTimer.seconds();
-                double idleTime = 1.0;
-                handleWaitAfterPath(t, PathState.PATH_6, paths.Path6, idleTime);
-                break;
             }
 
+            // PATH 6 (Group A end)
             case PATH_6:
                 updateShooterSimple();
-                intake.setPower(INTAKE_POWER);
-                intake2.setPower(INTAKE_POWER);
+                intake.setPower(0);
+                intake2.setPower(0);
+
                 if (!follower.isBusy()) {
-                    intake.setPower(0);
-                    intake2.setPower(0);
                     setPathState(PathState.WAIT_AFTER_PATH_6);
                 }
                 break;
 
             case WAIT_AFTER_PATH_6: {
                 double t = pathTimer.seconds();
-                double idleTime = 1.0;
-                handleWaitAfterPath(t, PathState.PATH_7, paths.Path7, idleTime);
+                double idleTime6 = 1.0;
+                handleEndWait(t, PathState.PATH_7, paths.Path7, idleTime6);
                 break;
             }
 
-            case PATH_7:
+            // PATH 7 (Group B)
+            case PATH_7: {
                 updateShooterSimple();
-                intake.setPower(INTAKE_POWER);
-                intake2.setPower(INTAKE_POWER);
+                double t = pathTimer.seconds();
+                if (t > 1.0) {
+                    intake.setPower(INTAKE_POWER);
+                    intake2.setPower(INTAKE_POWER);
+                } else {
+                    intake.setPower(0);
+                    intake2.setPower(0);
+                }
+
                 if (!follower.isBusy()) {
                     intake.setPower(0);
                     intake2.setPower(0);
-                    setPathState(PathState.WAIT_AFTER_PATH_7);
+                    follower.followPath(paths.Path8, true);
+                    follower.setMaxPower(1.0);
+                    setPathState(PathState.PATH_8);
                 }
                 break;
-
-            case WAIT_AFTER_PATH_7: {
-                double t = pathTimer.seconds();
-                double idleTime = 1.0;
-                handleWaitAfterPath(t, PathState.PATH_8, paths.Path8, idleTime);
-                break;
             }
 
+            // PATH 8 (Group A end)
             case PATH_8:
                 updateShooterSimple();
-                intake.setPower(INTAKE_POWER);
-                intake2.setPower(INTAKE_POWER);
+                intake.setPower(0);
+                intake2.setPower(0);
+
                 if (!follower.isBusy()) {
-                    intake.setPower(0);
-                    intake2.setPower(0);
                     setPathState(PathState.WAIT_AFTER_PATH_8);
                 }
                 break;
 
             case WAIT_AFTER_PATH_8: {
                 double t = pathTimer.seconds();
-                double idleTime = 1.0;
-                handleWaitAfterPath(t, PathState.PATH_9, paths.Path9, idleTime);
+                double idleTime8 = 1.0;
+                handleEndWait(t, PathState.PATH_9, paths.Path9, idleTime8);
                 break;
             }
 
-            case PATH_9:
+            // PATH 9 (Group B)
+            case PATH_9: {
                 updateShooterSimple();
-                intake.setPower(INTAKE_POWER);
-                intake2.setPower(INTAKE_POWER);
+                double t = pathTimer.seconds();
+                if (t > 1.0) {
+                    intake.setPower(INTAKE_POWER);
+                    intake2.setPower(INTAKE_POWER);
+                } else {
+                    intake.setPower(0);
+                    intake2.setPower(0);
+                }
+
                 if (!follower.isBusy()) {
                     intake.setPower(0);
                     intake2.setPower(0);
-                    setPathState(PathState.WAIT_AFTER_PATH_9);
+                    follower.followPath(paths.Path10, true);
+                    follower.setMaxPower(1.0);
+                    setPathState(PathState.PATH_10);
                 }
                 break;
-
-            case WAIT_AFTER_PATH_9: {
-                double t = pathTimer.seconds();
-                double idleTime = 1.0;
-                handleWaitAfterPath(t, PathState.PATH_10, paths.Path10, idleTime);
-                break;
             }
 
+            // PATH 10 (Group A end)
             case PATH_10:
                 updateShooterSimple();
-                intake.setPower(INTAKE_POWER);
-                intake2.setPower(INTAKE_POWER);
+                intake.setPower(0);
+                intake2.setPower(0);
+
                 if (!follower.isBusy()) {
-                    intake.setPower(0);
-                    intake2.setPower(0);
                     setPathState(PathState.WAIT_AFTER_PATH_10);
                 }
                 break;
 
             case WAIT_AFTER_PATH_10: {
                 double t = pathTimer.seconds();
-                double idleTime = 1.0;
-                handleWaitAfterPath(t, PathState.PATH_11, paths.Path11, idleTime);
+                double idleTime10 = 1.0;
+                handleEndWait(t, PathState.PATH_11, paths.Path11, idleTime10);
                 break;
             }
 
-            case PATH_11:
+            // PATH 11 (Group B)
+            case PATH_11: {
                 updateShooterSimple();
-                intake.setPower(INTAKE_POWER);
-                intake2.setPower(INTAKE_POWER);
+                double t = pathTimer.seconds();
+                if (t > 1.0) {
+                    intake.setPower(INTAKE_POWER);
+                    intake2.setPower(INTAKE_POWER);
+                } else {
+                    intake.setPower(0);
+                    intake2.setPower(0);
+                }
+
                 if (!follower.isBusy()) {
                     intake.setPower(0);
                     intake2.setPower(0);
-                    setPathState(PathState.WAIT_AFTER_PATH_11);
+                    follower.followPath(paths.Path12, true);
+                    follower.setMaxPower(1.0);
+                    setPathState(PathState.PATH_12);
                 }
                 break;
-
-            case WAIT_AFTER_PATH_11: {
-                double t = pathTimer.seconds();
-                double idleTime = 1.0;
-                handleWaitAfterPath(t, PathState.PATH_12, paths.Path12, idleTime);
-                break;
             }
 
+            // PATH 12 (Group A end, final)
             case PATH_12:
                 updateShooterSimple();
-                intake.setPower(INTAKE_POWER);
-                intake2.setPower(INTAKE_POWER);
+                intake.setPower(0);
+                intake2.setPower(0);
+
                 if (!follower.isBusy()) {
-                    intake.setPower(0);
-                    intake2.setPower(0);
                     setPathState(PathState.WAIT_AFTER_PATH_12);
                 }
                 break;
 
             case WAIT_AFTER_PATH_12: {
                 double t = pathTimer.seconds();
-                double idleTime = 1.0;
-                handleWaitAfterPath(t, PathState.DONE, null, idleTime);
+                double idleTime12 = 1.0;
+                // no next path, so null and DONE
+                handleEndWait(t, PathState.DONE, null, idleTime12);
                 break;
             }
 
             case DONE:
-                shooter.setVelocity(0);
+                updateShooterSimple();
                 intake.setPower(0);
                 intake2.setPower(0);
                 break;
