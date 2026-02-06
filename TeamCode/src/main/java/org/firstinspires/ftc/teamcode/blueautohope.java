@@ -26,8 +26,8 @@ public class blueautohope extends OpMode {
     private DcMotorEx shooter2;
 
     // TOTAL shooter speeds (split across two motors)
-    private static final double SHOOTER_TOTAL_BASE = 3000;   // 800 each
-    private static final double SHOOTER_TOTAL_TARGET = 3200; // 900 each
+    private static final double SHOOTER_TOTAL_BASE = 2620;   // total → 1310 each
+    private static final double SHOOTER_TOTAL_TARGET = 3100; // total → 1550 each
 
     private Servo shooterServo;
     private static final double SHOOTER_SERVO_START_POS = 0.03;
@@ -70,93 +70,84 @@ public class blueautohope extends OpMode {
                     .build();
 
             Path2 = follower.pathBuilder().addPath(
-                            new BezierLine(
+                            new BezierCurve(
                                     new Pose(58.000, 100.000),
-                                    new Pose(50.000, 70.000)
+                                    new Pose(58.000, 91.000),
+                                    new Pose(48.000, 88.000)
                             )
                     ).setConstantHeadingInterpolation(Math.toRadians(180))
                     .build();
 
             Path3 = follower.pathBuilder().addPath(
                             new BezierLine(
-                                    new Pose(50.000, 70.000),
-                                    new Pose(24.000, 70.000)
+                                    new Pose(48.000, 88.000),
+                                    new Pose(24.000, 88.000)
                             )
                     ).setConstantHeadingInterpolation(Math.toRadians(180))
                     .build();
 
             Path4 = follower.pathBuilder().addPath(
-                            new BezierLine(
-                                    new Pose(24.000, 70.000),
+                            new BezierCurve(
+                                    new Pose(24.000, 88.000),
+                                    new Pose(48.000, 88.681),
                                     new Pose(58.000, 100.000)
                             )
                     ).setConstantHeadingInterpolation(Math.toRadians(180))
                     .build();
 
             Path5 = follower.pathBuilder().addPath(
-                            new BezierLine(
+                            new BezierCurve(
                                     new Pose(58.000, 100.000),
-                                    new Pose(12.000, 70.000)
+                                    new Pose(58.000, 80.000),
+                                    new Pose(48.000, 67.000)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(144))
+                    ).setConstantHeadingInterpolation(Math.toRadians(180))
                     .build();
 
             Path6 = follower.pathBuilder().addPath(
                             new BezierLine(
-                                    new Pose(12.000, 70.000),
-                                    new Pose(58.000, 100.000)
+                                    new Pose(48.000, 67.000),
+                                    new Pose(24.000, 67.000)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(144), Math.toRadians(180))
+                    ).setConstantHeadingInterpolation(Math.toRadians(180))
                     .build();
 
             Path7 = follower.pathBuilder().addPath(
-                            new BezierLine(
-                                    new Pose(58.000, 100.000),
-                                    new Pose(12.000, 70.000)
+                            new BezierCurve(
+                                    new Pose(24.000, 67.000),
+                                    new Pose(52.235, 76.211),
+                                    new Pose(58.000, 100.000)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(144))
+                    ).setConstantHeadingInterpolation(Math.toRadians(180))
                     .build();
 
             Path8 = follower.pathBuilder().addPath(
-                            new BezierLine(
-                                    new Pose(12.000, 70.000),
-                                    new Pose(58.000, 100.000)
+                            new BezierCurve(
+                                    new Pose(58.000, 100.000),
+                                    new Pose(60.229, 69.331),
+                                    new Pose(48.000, 46.000)
                             )
-                    ).setLinearHeadingInterpolation(Math.toRadians(144), Math.toRadians(180))
+                    ).setConstantHeadingInterpolation(Math.toRadians(180))
                     .build();
 
             Path9 = follower.pathBuilder().addPath(
-                            new BezierCurve(
-                                    new Pose(58.000, 100.000),
-                                    new Pose(47.000, 84.000),
-                                    new Pose(26.000, 84.000)
+                            new BezierLine(
+                                    new Pose(48.000, 46.000),
+                                    new Pose(24.000, 46.000)
                             )
                     ).setConstantHeadingInterpolation(Math.toRadians(180))
                     .build();
 
             Path10 = follower.pathBuilder().addPath(
-                            new BezierLine(
-                                    new Pose(26.000, 84.000),
+                            new BezierCurve(
+                                    new Pose(24.000, 46.000),
+                                    new Pose(53.585, 67.415),
                                     new Pose(58.000, 100.000)
                             )
                     ).setConstantHeadingInterpolation(Math.toRadians(180))
                     .build();
 
-            Path11 = follower.pathBuilder().addPath(
-                            new BezierLine(
-                                    new Pose(58.000, 100.000),
-                                    new Pose(12.000, 70.000)
-                            )
-                    ).setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(144))
-                    .build();
-
-            Path12 = follower.pathBuilder().addPath(
-                            new BezierLine(
-                                    new Pose(12.000, 70.000),
-                                    new Pose(58.000, 100.000)
-                            )
-                    ).setLinearHeadingInterpolation(Math.toRadians(144), Math.toRadians(180))
-                    .build();
+            // If you later add Path11/12, define them here similarly.
         }
     }
 
@@ -211,13 +202,13 @@ public class blueautohope extends OpMode {
         }
     }
 
-    // NO PULSES: shooter ramps, intake just turns on then off
+    // Shooter ramps, intake just turns on then off in the wait state.
     private void handleEndWait(double t, PathState nextPathState, PathChain nextPath, double idleTime) {
         double rampDuration = 0.9;
         double rampStart = idleTime;
         double totalWaitLimit = 1.7;
 
-        // Shooter ramp 1600 → 1800 total
+        // Shooter ramp BASE → TARGET (total velocity)
         if (t < rampStart) {
             setShooterVelocityBoth(SHOOTER_TOTAL_BASE);
         } else {
@@ -232,7 +223,7 @@ public class blueautohope extends OpMode {
             }
         }
 
-        // Intake: off during idle, then ON solid until the 2s cap
+        // Intake: off during idle, then ON solid until totalWaitLimit
         if (t < idleTime) {
             intake.setPower(0);
         } else if (t < totalWaitLimit) {
@@ -254,6 +245,7 @@ public class blueautohope extends OpMode {
     private void updateStateMachine() {
         switch (pathState) {
 
+            // -------- PATH 1 → WAIT 1 (stop + shoot) --------
             case PATH_1:
                 updateShooterSimple();
                 if (!follower.isBusy()) {
@@ -263,25 +255,27 @@ public class blueautohope extends OpMode {
 
             case WAIT_AFTER_PATH_1: {
                 double t = pathTimer.seconds();
+                // After wait, go to PATH_2 (no wait after PATH_2)
                 handleEndWait(t, PathState.PATH_2, paths.Path2, 1.0);
                 break;
             }
 
+            // -------- PATH 2 (pure drive) --------
             case PATH_2:
                 updateShooterSimple();
                 intake.setPower(0);
                 if (!follower.isBusy()) {
+                    // Go straight into PATH_3, no WAIT here
                     follower.followPath(paths.Path3, true);
                     follower.setMaxPower(1.0);
                     setPathState(PathState.PATH_3);
                 }
                 break;
 
-            // Intake after 1s while driving 3,5,7,9,11
+            // -------- PATH 3 → PATH 4, intake after 1s while driving --------
             case PATH_3: {
                 updateShooterSimple();
-                double t = pathTimer.seconds();
-                intake.setPower(t > 1.0 ? INTAKE_POWER : 0);
+                intake.setPower(INTAKE_POWER); // was: t > 1.0 ? INTAKE_POWER : 0
                 if (!follower.isBusy()) {
                     intake.setPower(0);
                     follower.followPath(paths.Path4, true);
@@ -291,6 +285,7 @@ public class blueautohope extends OpMode {
                 break;
             }
 
+            // -------- PATH 4 → WAIT 4 (stop + shoot) --------
             case PATH_4:
                 updateShooterSimple();
                 if (!follower.isBusy()) {
@@ -300,16 +295,17 @@ public class blueautohope extends OpMode {
 
             case WAIT_AFTER_PATH_4: {
                 double t = pathTimer.seconds();
+                // After wait, go to PATH_5 (no wait after PATH_5)
                 handleEndWait(t, PathState.PATH_5, paths.Path5, 1.0);
                 break;
             }
 
+            // -------- PATH 5 (pure drive) --------
             case PATH_5: {
                 updateShooterSimple();
-                double t = pathTimer.seconds();
-                intake.setPower(t > 1.0 ? INTAKE_POWER : 0);
+                intake.setPower(0);
                 if (!follower.isBusy()) {
-                    intake.setPower(0);
+                    // Directly follow PATH_6, no WAIT here
                     follower.followPath(paths.Path6, true);
                     follower.setMaxPower(1.0);
                     setPathState(PathState.PATH_6);
@@ -317,6 +313,7 @@ public class blueautohope extends OpMode {
                 break;
             }
 
+            // -------- PATH 6 → WAIT 6 (stop + shoot) --------
             case PATH_6:
                 updateShooterSimple();
                 intake.setPower(0);
@@ -327,14 +324,15 @@ public class blueautohope extends OpMode {
 
             case WAIT_AFTER_PATH_6: {
                 double t = pathTimer.seconds();
+                // After wait, go to PATH_7 (no wait after PATH_7)
                 handleEndWait(t, PathState.PATH_7, paths.Path7, 1.0);
                 break;
             }
 
+            // -------- PATH 7, intake after 1s, then PATH 8 --------
             case PATH_7: {
                 updateShooterSimple();
-                double t = pathTimer.seconds();
-                intake.setPower(t > 1.0 ? INTAKE_POWER : 0);
+                intake.setPower(INTAKE_POWER); // was: t > 1.0 ? INTAKE_POWER : 0
                 if (!follower.isBusy()) {
                     intake.setPower(0);
                     follower.followPath(paths.Path8, true);
@@ -344,6 +342,8 @@ public class blueautohope extends OpMode {
                 break;
             }
 
+
+            // -------- PATH 8 → WAIT 8 (stop + shoot) --------
             case PATH_8:
                 updateShooterSimple();
                 intake.setPower(0);
@@ -354,14 +354,15 @@ public class blueautohope extends OpMode {
 
             case WAIT_AFTER_PATH_8: {
                 double t = pathTimer.seconds();
+                // After wait, go to PATH_9 (no wait after PATH_9)
                 handleEndWait(t, PathState.PATH_9, paths.Path9, 1.0);
                 break;
             }
 
+            // -------- PATH 9, intake after 1s, then PATH 10 --------
             case PATH_9: {
                 updateShooterSimple();
-                double t = pathTimer.seconds();
-                intake.setPower(t > 1.0 ? INTAKE_POWER : 0);
+                intake.setPower(INTAKE_POWER); // was: t > 1.0 ? INTAKE_POWER : 0
                 if (!follower.isBusy()) {
                     intake.setPower(0);
                     follower.followPath(paths.Path10, true);
@@ -371,6 +372,7 @@ public class blueautohope extends OpMode {
                 break;
             }
 
+            // -------- PATH 10 → WAIT 10 (final stop + shoot) --------
             case PATH_10:
                 updateShooterSimple();
                 intake.setPower(0);
@@ -381,37 +383,15 @@ public class blueautohope extends OpMode {
 
             case WAIT_AFTER_PATH_10: {
                 double t = pathTimer.seconds();
-                handleEndWait(t, PathState.PATH_11, paths.Path11, 1.0);
-                break;
-            }
-
-            case PATH_11: {
-                updateShooterSimple();
-                double t = pathTimer.seconds();
-                intake.setPower(t > 1.0 ? INTAKE_POWER : 0);
-                if (!follower.isBusy()) {
-                    intake.setPower(0);
-                    follower.followPath(paths.Path12, true);
-                    follower.setMaxPower(1.0);
-                    setPathState(PathState.PATH_12);
-                }
-                break;
-            }
-
-            case PATH_12:
-                updateShooterSimple();
-                intake.setPower(0);
-                if (!follower.isBusy()) {
-                    setPathState(PathState.WAIT_AFTER_PATH_12);
-                }
-                break;
-
-            case WAIT_AFTER_PATH_12: {
-                double t = pathTimer.seconds();
+                // End of routine (no Path11/12 defined yet)
                 handleEndWait(t, PathState.DONE, null, 1.0);
                 break;
             }
 
+            // If you later define 11/12, you can keep your old pattern here.
+            case PATH_11:
+            case PATH_12:
+            case WAIT_AFTER_PATH_12:
             case DONE:
                 updateShooterSimple();
                 intake.setPower(0);
@@ -477,7 +457,7 @@ public class blueautohope extends OpMode {
             aimMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
             aimMotor.setTargetPosition(0);
             aimMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            aimMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+            // aimMotor.setDirection(DcMotorSimple.Direction.REVERSE);
             aimMotor.setPower(AIM_POWER);
 
             paths = new Paths(follower);
